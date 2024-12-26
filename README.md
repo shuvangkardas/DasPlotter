@@ -247,14 +247,14 @@ DasPlotter(datamap, {dataset1, dataset2});
 ### 3. Simulink Performance Optimization
 Improve Simulink simulation speed by:
 1. Removing scopes from the model
-2. Logging data to workspace
+2. Logging data to workspace in aray format. let's say you set the name 'dataset'
 3. Using DasPlotter for post-simulation visualization
 ```matlab
 % After Simulink simulation completes
-datamap.time = simout.time;
-datamap.Results = {1, 2, 3};  % Column indices from simout
+datamap.time = 1; % simulink, save the time in first index
+datamap.Results = {2, 3, 4};  % Column indices from simout
 datamap.meta.mode = 'show';
-DasPlotter(datamap, simout.data);
+DasPlotter(datamap, out.dataset);
 ```
 
 ### 4. Publication-Quality Figures
@@ -315,11 +315,6 @@ DasPlotter(datamap, dataset);
 ```
 
 
-## Multiple Plots from Same dataset 
-
-
-## Simulink Configurble plots
-
 ### Output Modes
 
 DasPlotter supports two output modes:
@@ -358,5 +353,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Contact
 
-Your Name - shuvangkarcdas[at]gmail.com
+Shuvangkar Das - shuvangkarcdas[at]gmail.com
 Project Link: https://github.com/shuvangkardas/DasPlotter
