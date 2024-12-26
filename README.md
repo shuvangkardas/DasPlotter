@@ -2,6 +2,15 @@
 
 DasPlotter is a MATLAB library for creating customizable, publication-quality plots from time-series datasets. It provides a flexible and intuitive interface for generating single or multiple subplots with various configuration options.
 
+## Example Use Cases
+
+1. **Generate Multiple Plots**: Provide a datamap and use `DasPlotter` to quickly create multiple plots with different combinations from your time series data.  
+2. **Compare Datasets**: Pass two datasets from different experiments into `DasPlotter` to compare them visually.  
+3. **Optimize Simulink Speed**: Comment out scopes in Simulink, log data to the workspace, and configure `DasPlotter` to generate plots after simulation.  
+4. **Publication-Quality Figures**: Easily create and save high-quality figures as PNG files directly from experiment datasets.  
+5. **And More**: Extend `DasPlotter` for various custom plotting needs.  
+
+
 ## Features
 
 - Support for single and multiple subplot layouts
@@ -17,8 +26,7 @@ DasPlotter is a MATLAB library for creating customizable, publication-quality pl
 ```
 DasPlotter/
 ├── DasPlotter/
-│   ├── DasPlotter.m        # Main plotting function
-│   └── DasPlotter.asv      # MATLAB autosave file
+│   └── DasPlotter.m        # Main plotting function
 ├── Function/
 │   └── create_dataset.m    # Helper function for dataset creation
 ├── Script/
@@ -33,7 +41,7 @@ There are two ways to install DasPlotter:
 
 ### Option 1: Using the Installation Script (Recommended)
 
-1. Clone this repository:
+1. Clone/download this repository:
 ```bash
 git clone https://github.com/yourusername/DasPlotter.git
 ```
@@ -45,13 +53,13 @@ run('install.m')
 
 ### Option 2: Manual Installation
 
-1. Clone this repository
+1. Clone/download this repository
 2. Add the DasPlotter folder to your MATLAB path:
 ```matlab
 addpath('./DasPlotter/');
 ```
 
-Note: If you use the installation script (Option 1), you don't need to manually add the path in your scripts.
+Note: If you use the installation script (Option 1), you don't need to manually add the path in your script everytime you are generating figures.
 
 ## Quick Start
 
@@ -199,6 +207,78 @@ datamap.meta.title.Voltage = 'Three Phase Voltages';
 datamap.meta.title.Current = 'Three Phase Currents';
 ```
 
+
+## Use Cases
+
+### 1. Efficient Time-Series Data Visualization
+Perfect for analyzing multiple aspects of time-series data without repetitive plotting code:
+```matlab
+% Plot voltage and current
+datamap1 = struct();
+datamap1.time = 1;
+datamap1.Voltage = {2, 3, 4};
+datamap1.Current = {5, 6, 7};
+DasPlotter(datamap1, dataset);
+
+% Plot power and efficiency from same dataset
+datamap2 = struct();
+datamap2.time = 1;
+datamap2.Power = {8};
+datamap2.Efficiency = {9};
+DasPlotter(datamap2, dataset);
+```
+
+### 2. Experimental Data Comparison
+Easily compare results from multiple experiments:
+```matlab
+% Load two experimental datasets
+dataset1 = experiment1_data;
+dataset2 = experiment2_data;
+
+% Configure plots
+datamap.time = 1;
+datamap.Voltage = {2, 3, 4};
+datamap.Current = {5, 6, 7};
+
+% Plot both datasets together
+DasPlotter(datamap, {dataset1, dataset2});
+```
+
+### 3. Simulink Performance Optimization
+Improve Simulink simulation speed by:
+1. Removing scopes from the model
+2. Logging data to workspace
+3. Using DasPlotter for post-simulation visualization
+```matlab
+% After Simulink simulation completes
+datamap.time = simout.time;
+datamap.Results = {1, 2, 3};  % Column indices from simout
+datamap.meta.mode = 'show';
+DasPlotter(datamap, simout.data);
+```
+
+### 4. Publication-Quality Figures
+Generate professional plots ready for publication:
+```matlab
+datamap.meta.size.height = 2;    % Figure height in inches
+datamap.meta.size.width = 5;     % Figure width in inches
+datamap.meta.lineWidth = 1;      % Professional line width
+datamap.title = 'ExperimentResults';
+datamap.meta.mode = 'save';      % Auto-save as PNG
+DasPlotter(datamap, dataset);
+```
+
+### Additional Applications
+- Automated report generation
+- Real-time data monitoring
+- Batch processing of multiple datasets
+- Custom data visualization templates
+- Standardized plotting across research groups
+- Quick data exploration and analysis
+
+
+
+
 ## Advanced Usage
 
 ### Full Configuration Example
@@ -233,6 +313,12 @@ datamap.meta.mode = 'save';     % Save plot instead of displaying
 % Generate and save plots
 DasPlotter(datamap, dataset);
 ```
+
+
+## Multiple Plots from Same dataset 
+
+
+## Simulink Configurble plots
 
 ### Output Modes
 
