@@ -24,15 +24,19 @@ DasPlotter is a MATLAB library for creating customizable, publication-quality pl
 ## Project Structure
 
 ```
-DasPlotter/
-├── DasPlotter/
-│   └── DasPlotter.m        # Main plotting function
-├── Function/
-│   └── create_dataset.m    # Helper function for dataset creation
-├── Script/
-│   ├── install.m           # Installation script
-│   └── dp_example[1-5].m   # Example scripts
-└── README.md
+DasPlotter
+│   README.md
+│   install.m
+│   uninstall.m
+├───DasPlotter
+│       DasPlotter.m
+└───Examples
+        create_dataset.m
+        dp_example1.m
+        dp_example2.m
+        dp_example3.m
+        dp_example4.m
+        
 ```
 
 ## Installation
