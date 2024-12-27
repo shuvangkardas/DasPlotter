@@ -1,3 +1,11 @@
+% Library Name: DasPlotter
+% Author: Shuvangkar Das
+% LinkedIn: https://www.linkedin.com/in/shuvangkardas
+% Year: 2024
+% Description:  library for creating customizable,
+% publication-quality plots from time-series datasets
+
+
 function DasPlotter(datamap, dataset)
     % DasPlotter - Creates plots from dataset according to datamap specifications
     % Parameters:

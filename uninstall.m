@@ -5,19 +5,23 @@
 % Description:  library for creating customizable,
 % publication-quality plots from time-series datasets
 
+
 % Get current script directory
 rootPath = fileparts(mfilename('fullpath'));
 
-% Add paths with DasPlotter subdirectory structure
-addpath(fullfile(rootPath, 'DasPlotter'));
-addpath(genpath(fullfile(rootPath, 'Function')));
-addpath(genpath(fullfile(rootPath, 'Script')));
+% Remove paths
+rmpath(fullfile(rootPath, 'DasPlotter'));
+rmpath(fullfile(rootPath, 'Function'));
+rmpath(fullfile(rootPath, 'Script'));
 
 % Save path
 try
     savepath;
-    fprintf('DasPlotter Installation successful!\n');
+    fprintf('DasPlotter uninstalled successfully!\n');
 catch
     warning('Could not save path permanently. Run as administrator.');
-    fprintf('Paths added for current session only.\n');
+    fprintf('Paths removed for current session only.\n');
 end
+
+% Clear functions from memory
+clear functions

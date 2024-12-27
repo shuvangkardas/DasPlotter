@@ -1,7 +1,15 @@
+% Library Name: DasPlotter
+% Author: Shuvangkar Das
+% LinkedIn: https://www.linkedin.com/in/shuvangkardas
+% Year: 2024
+% Description:  library for creating customizable,
+% publication-quality plots from time-series datasets
+
 clc; close all; clear all;
 
 % Add the library folder to include DasPlotter
-addpath('./DasPlotter/'); 
+% if you not prefer installing dasplotter
+% addpath('./DasPlotter/'); 
 
 dataset = create_dataset();
 % The dataset matrix has the following columns:

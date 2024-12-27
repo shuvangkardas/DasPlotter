@@ -1,7 +1,15 @@
+% Library Name: DasPlotter
+% Author: Shuvangkar Das
+% LinkedIn: https://www.linkedin.com/in/shuvangkardas
+% Year: 2024
+% Description:  library for creating customizable,
+% publication-quality plots from time-series datasets
+
+
 clc; close all; clear all;
 
 % Add the library folder to include DasPlotter
-addpath('./DasPlotter/'); 
+% addpath('./DasPlotter/'); 
 
 dataset = create_dataset();
 % The dataset matrix has the following columns:
@@ -22,23 +30,6 @@ datamap = struct();
 datamap.time = 1;
 datamap.Voltage = {2, 3, 4};
 datamap.Current = {5, 6, 7};
-datamap.Pgen = {8};
 
-%% Plot metedata
-datamap.meta.lineWidth = 1;
-datamap.meta.layout = [3 ,1];
-
-% subplt-wise legend
-datamap.meta.legend.Voltage = {'Va', 'Vb', 'Vc'};
-datamap.meta.legend.Current = {'Ia', 'Ib', 'Ic'};
-
-%subplot-wise ylimt
-datamap.meta.ylim.Voltage = [-1.5, 1.5];
-datamap.meta.ylim.Current = [-1.5, 1.5];
-datamap.meta.ylim.Pgen = [0, 1.2];
-
-% 'show' - jut plot | 'save' - plot and save in png
-datamap.title = 'AC_Power';
-datamap.meta.mode = 'save';
 % Call DasPlotter
 DasPlotter(datamap, dataset);
