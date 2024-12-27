@@ -62,6 +62,10 @@ addpath('./DasPlotter/');
 Note: If you use the installation script (Option 1), you don't need to manually add the path in your script everytime you are generating figures.
 
 ## Quick Start
+1. Install the library 
+2. Run the examples script from example folder
+3. Follow the tutorial presented below for details
+
 
 Here's a basic example to get you started:
 
