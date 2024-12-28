@@ -362,4 +362,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Contact
 
 Shuvangkar Das - shuvangkarcdas[at]gmail.com
+LinkedIn: https://www.linkedin.com/in/shuvangkardas
 Project Link: https://github.com/shuvangkardas/DasPlotter
