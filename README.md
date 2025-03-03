@@ -429,4 +429,99 @@ DasPlotter(datamap, out.dataset);
 
 ### 6. Publication-Quality Figures
 Generate professional plots ready for publication:
+```matlab
+datamap.meta.size.height = 2;    % Figure height in inches
+datamap.meta.size.width = 5;     % Figure width in inches
+datamap.meta.lineWidth = 1;      % Professional line width
+datamap.title = 'ExperimentResults';
+datamap.meta.mode = 'save';      % Auto-save as PNG
+DasPlotter(datamap, dataset);
 ```
+
+### Additional Applications
+- Automated report generation
+- Real-time data monitoring
+- Batch processing of multiple datasets
+- Custom data visualization templates
+- Standardized plotting across research groups
+- Quick data exploration and analysis
+
+
+
+
+## Advanced Usage
+
+### Full Configuration Example
+
+Here's a comprehensive example showing multiple advanced features:
+
+```matlab
+% Basic structure setup
+datamap = struct();
+datamap.time = 1;
+datamap.Voltage = {2, 3, 4};
+datamap.Current = {5, 6, 7};
+datamap.Pgen = {8};             % Single column plot
+
+% Configure plot metadata
+datamap.meta.lineWidth = 1;
+datamap.meta.layout = [3, 1];   % Vertical layout with 3 rows
+
+% Configure legends for each subplot
+datamap.meta.legend.Voltage = {'Va', 'Vb', 'Vc'};
+datamap.meta.legend.Current = {'Ia', 'Ib', 'Ic'};
+
+% Set y-axis limits for each subplot
+datamap.meta.ylim.Voltage = [-1.5, 1.5];
+datamap.meta.ylim.Current = [-1.5, 1.5];
+datamap.meta.ylim.Pgen = [0, 1.2];
+
+% Configure save options
+datamap.title = 'AC_Power';     % Base filename for saved plot
+datamap.meta.mode = 'save';     % Save plot instead of displaying
+
+% Generate and save plots
+DasPlotter(datamap, dataset);
+```
+
+
+### Output Modes
+
+DasPlotter supports two output modes:
+- `show`: Display plots in MATLAB figure window (default)
+- `save`: Save plots as PNG and MAT files with timestamp
+
+When using save mode:
+- Files are saved in the current directory
+- Filename format: `{title}_{timestamp}.png`
+- Resolution: 300 DPI
+- Figure dimensions are automatically optimized for publication
+
+### Layout Control
+
+The layout can be controlled in several ways:
+1. Automatic grid layout (default)
+2. Vertical layout (`meta.orientation = 'vertical'`)
+3. Manual layout specification (`meta.layout = [rows, cols]`)
+
+For optimal visualization:
+- Grid layout works best for 2-4 subplots
+- Vertical layout is recommended for 3+ related plots
+- Manual layout gives full control over arrangement
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Contact
+
+Shuvangkar Das - shuvangkarcdas[at]gmail.com
+Project Link: https://github.com/shuvangkardas/DasPlotter
