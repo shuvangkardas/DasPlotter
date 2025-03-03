@@ -19,7 +19,10 @@ DasPlotter is a MATLAB library for creating customizable, publication-quality pl
 - Data point annotation capabilities
 - Flexible output modes (display or save)
 - Automatic grid layout optimization
-- Support for multiple datasets
+- Support for multiple datasets with comprehensive legend control
+- High-quality figure export with minimal whitespace
+- Custom x-axis variable support (not limited to time)
+- Common x-axis vector support across multiple datasets
 
 ## Project Structure
 
@@ -36,6 +39,9 @@ DasPlotter
         dp_example2.m
         dp_example3.m
         dp_example4.m
+        dp_example5.m
+        dp_example6.m
+        dp_example7.m
         
 ```
 
@@ -116,7 +122,7 @@ DasPlotter(datamap, dataset);
 The dataset should be a matrix or cell array where:
 - Each row represents a time point
 - Each column represents a different variable
-- The first column is typically the time vector
+- The first column is typically the time vector (or another independent variable)
 
 Example dataset structure:
 ```
@@ -149,10 +155,13 @@ datamap.meta.size.width = 5;         % Subplot width in inches
 % Axis Configuration
 datamap.meta.ylim = struct();        % Y-axis limits per subplot
 datamap.meta.ylabel = struct();      % Y-axis labels per subplot
+datamap.meta.xlabel.name = 'Time';   % Custom x-axis label
 
 % Legend Options
 datamap.meta.legend = struct();      % Legend labels per subplot
 datamap.meta.legend.orientation = 'vertical';  % Legend orientation
+datamap.meta.legend.location = 'northeast';    % Legend position
+datamap.meta.legend.fontSize = 9;             % Legend font size
 
 % Data Annotation
 datamap.meta.datatip = 0.05;         % Time point for data annotation
@@ -168,6 +177,9 @@ datamap.meta.title = struct();       % Title configuration
 datamap.meta.ylabel.Voltage = 'pu';
 datamap.meta.ylabel.Current = 'pu';
 datamap.meta.ylabel.Pgen = 'pu';
+
+% Set custom x-axis label
+datamap.meta.xlabel.name = 'Time (seconds)';
 
 % Set y-axis limits per subplot
 datamap.meta.ylim.Voltage = [-2, 2];
@@ -200,13 +212,113 @@ datamap.meta.datatip = 0.05;  % Time point to annotate
 % 3. Use consistent colors with plot lines
 ```
 
-### Legend Configuration
+### Custom X-Axis Variable
+
+You can use any column as the x-axis variable, not just time:
 
 ```matlab
+% Use 'episode' as the x-axis instead of time
+datamap.xaxis = 1;                          % Column with episode numbers
+datamap.meta.xlabel.name = 'Episode';       % Custom x-axis label
+
+% Plot data against the custom x-axis
+datamap.Reward = {2};                       % Plot column 2 vs. episode
+datamap.Loss = {3};                         % Plot column 3 vs. episode
+
+% This is ideal for:
+% - Reinforcement learning training progress
+% - Iteration-based algorithms
+% - Epoch-based training data
+% - Any non-time independent variable
+```
+
+### Common X-Axis Vector
+
+You can use a common x-axis vector across multiple datasets with different structures:
+
+```matlab
+% Create a common x-axis vector
+episodes = 1:100;
+
+% Set up datasets with different structures
+datasets = {dataset1, dataset2};  % Cell array of different datasets
+
+% Method 1: Pass the vector as third parameter (highest priority)
+DasPlotter(datamap, datasets, episodes);
+
+% Method 2: Include the vector in datamap.xaxis
+datamap.xaxis = episodes;  % Direct vector instead of column index
+DasPlotter(datamap, datasets);
+
+% Method 3: Use a derived vector (e.g., convert episodes to hours)
+training_hours = episodes * 0.5;  % Each episode takes 0.5 hours
+datamap.meta.xlabel.name = 'Training Time (hours)';
+DasPlotter(datamap, datasets, training_hours);
+```
+
+This approach is especially powerful for:
+- Comparing results from different runs with the same x-reference
+- Aligning datasets with different internal structures
+- Converting between different units (e.g., episodes to time)
+- Applying custom transformations to the x-axis
+
+### Legend Configuration
+
+For single dataset:
+```matlab
+% Basic legend labels
 datamap.meta.legend.Voltage = {'Va', 'Vb', 'Vc'};
 datamap.meta.legend.Current = {'Ia', 'Ib', 'Ic'};
-datamap.meta.legend.orientation = 'horizontal';  % or 'vertical'
+
+% Legend appearance
+datamap.meta.legend.orientation = 'vertical';     % 'horizontal' or 'vertical'
+datamap.meta.legend.location = 'eastoutside';     % Position the legend outside to the right
+datamap.meta.legend.fontSize = 9;                 % Set legend font size
 ```
+
+Available legend locations include: 'northeast', 'northwest', 'southeast', 'southwest', 'north', 'south', 'east', 'west', 'northoutside', 'southoutside', 'eastoutside', 'westoutside', and 'best'.
+
+### Working with Multiple Datasets
+
+DasPlotter provides two approaches for handling legends with multiple datasets:
+
+#### Method 1: Explicit Legend Entries
+
+This method gives you complete control by explicitly naming each trace:
+
+```matlab
+% Create cell array of datasets
+datasets = {dataset1, dataset2};
+
+% Create explicit legend entries for each trace in each dataset
+datamap.meta.legend.Voltage = {'Normal Va', 'Normal Vb', 'Normal Vc', 'Fault Va', 'Fault Vb', 'Fault Vc'};
+datamap.meta.legend.Current = {'Normal Ia', 'Normal Ib', 'Normal Ic', 'Fault Ia', 'Fault Ib', 'Fault Ic'};
+
+% Call DasPlotter with both datasets
+DasPlotter(datamap, datasets);
+```
+
+#### Method 2: Using Dataset Prefixes
+
+This method automatically combines dataset names and variable names:
+
+```matlab
+% Create cell array of datasets
+datasets = {dataset1, dataset2};
+
+% Define variable names (without dataset prefix)
+datamap.meta.legend.Voltage = {'Va', 'Vb', 'Vc'};
+datamap.meta.legend.Current = {'Ia', 'Ib', 'Ic'};
+
+% Enable dataset prefixes and define dataset names
+datamap.meta.legend.useDatasetPrefix = true;
+datamap.meta.legend.datasetNames = {'Normal', 'Fault'};
+
+% This creates legends like: "Normal Va", "Fault Va", etc.
+DasPlotter(datamap, datasets);
+```
+
+Choose Method 1 for complete control or Method 2 for a more scalable approach with many datasets.
 
 ### Title Configuration
 
@@ -243,16 +355,66 @@ Easily compare results from multiple experiments:
 dataset1 = experiment1_data;
 dataset2 = experiment2_data;
 
+% Combine datasets
+datasets = {dataset1, dataset2};
+
 % Configure plots
+datamap = struct();
 datamap.time = 1;
 datamap.Voltage = {2, 3, 4};
 datamap.Current = {5, 6, 7};
 
-% Plot both datasets together
-DasPlotter(datamap, {dataset1, dataset2});
+% Set up legends to distinguish between datasets
+datamap.meta.legend.useDatasetPrefix = true;
+datamap.meta.legend.datasetNames = {'Experiment 1', 'Experiment 2'};
+datamap.meta.legend.Voltage = {'Va', 'Vb', 'Vc'};
+datamap.meta.legend.Current = {'Ia', 'Ib', 'Ic'};
+
+% Generate comparison plots
+DasPlotter(datamap, datasets);
 ```
 
-### 3. Simulink Performance Optimization
+### 3. Reinforcement Learning Training Visualization
+Use a custom x-axis to visualize training progress across episodes:
+```matlab
+% Configure plots with episode as x-axis
+datamap = struct();
+datamap.xaxis = 1;               % Use episode numbers as x-axis
+datamap.Reward = {2};            % Plot rewards
+datamap.Loss = {3};              % Plot training loss
+
+% Configure custom axis labels
+datamap.meta.xlabel.name = 'Training Episode';
+datamap.meta.ylabel.Reward = 'Average Reward';
+datamap.meta.ylabel.Loss = 'Loss Value';
+
+% Generate plots
+DasPlotter(datamap, training_data);
+```
+
+### 4. Training Algorithm Comparison
+Compare multiple training runs using a common episode vector:
+```matlab
+% Common episode vector
+episodes = 1:100;
+
+% Datasets from different algorithm runs
+datasets = {standard_run, improved_run};
+
+% Configure comparison plots
+datamap = struct();
+datamap.Reward = {2, 3};  % Different column indices in each dataset
+datamap.Loss = {3, 4};    % for the same metrics
+
+% Set up legends to distinguish between algorithms
+datamap.meta.legend.useDatasetPrefix = true;
+datamap.meta.legend.datasetNames = {'Standard', 'Improved'};
+
+% Use common episode vector for x-axis
+DasPlotter(datamap, datasets, episodes);
+```
+
+### 5. Simulink Performance Optimization
 Improve Simulink simulation speed by:
 1. Removing scopes from the model
 2. Logging data to workspace in aray format. let's say you set the name 'dataset'
@@ -265,101 +427,6 @@ datamap.meta.mode = 'show';
 DasPlotter(datamap, out.dataset);
 ```
 
-### 4. Publication-Quality Figures
+### 6. Publication-Quality Figures
 Generate professional plots ready for publication:
-```matlab
-datamap.meta.size.height = 2;    % Figure height in inches
-datamap.meta.size.width = 5;     % Figure width in inches
-datamap.meta.lineWidth = 1;      % Professional line width
-datamap.title = 'ExperimentResults';
-datamap.meta.mode = 'save';      % Auto-save as PNG
-DasPlotter(datamap, dataset);
 ```
-
-### Additional Applications
-- Automated report generation
-- Real-time data monitoring
-- Batch processing of multiple datasets
-- Custom data visualization templates
-- Standardized plotting across research groups
-- Quick data exploration and analysis
-
-
-
-
-## Advanced Usage
-
-### Full Configuration Example
-
-Here's a comprehensive example showing multiple advanced features:
-
-```matlab
-% Basic structure setup
-datamap = struct();
-datamap.time = 1;
-datamap.Voltage = {2, 3, 4};
-datamap.Current = {5, 6, 7};
-datamap.Pgen = {8};             % Single column plot
-
-% Configure plot metadata
-datamap.meta.lineWidth = 1;
-datamap.meta.layout = [3, 1];   % Vertical layout with 3 rows
-
-% Configure legends for each subplot
-datamap.meta.legend.Voltage = {'Va', 'Vb', 'Vc'};
-datamap.meta.legend.Current = {'Ia', 'Ib', 'Ic'};
-
-% Set y-axis limits for each subplot
-datamap.meta.ylim.Voltage = [-1.5, 1.5];
-datamap.meta.ylim.Current = [-1.5, 1.5];
-datamap.meta.ylim.Pgen = [0, 1.2];
-
-% Configure save options
-datamap.title = 'AC_Power';     % Base filename for saved plot
-datamap.meta.mode = 'save';     % Save plot instead of displaying
-
-% Generate and save plots
-DasPlotter(datamap, dataset);
-```
-
-
-### Output Modes
-
-DasPlotter supports two output modes:
-- `show`: Display plots in MATLAB figure window (default)
-- `save`: Save plots as PNG and MAT files with timestamp
-
-When using save mode:
-- Files are saved in the current directory
-- Filename format: `{title}_{timestamp}.png`
-- Resolution: 300 DPI
-- Figure dimensions are automatically optimized for publication
-
-### Layout Control
-
-The layout can be controlled in several ways:
-1. Automatic grid layout (default)
-2. Vertical layout (`meta.orientation = 'vertical'`)
-3. Manual layout specification (`meta.layout = [rows, cols]`)
-
-For optimal visualization:
-- Grid layout works best for 2-4 subplots
-- Vertical layout is recommended for 3+ related plots
-- Manual layout gives full control over arrangement
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contact
-
-Shuvangkar Das - shuvangkarcdas[at]gmail.com
-Project Link: https://github.com/shuvangkardas/DasPlotter

@@ -1,21 +1,23 @@
-function DasPlotter(datamap, dataset, timestamp)
+% Library Name: DasPlotter
+% Author: Shuvangkar Das
+% LinkedIn: https://www.linkedin.com/in/shuvangkardas
+% Year: 2024
+% Description:  library for creating customizable,
+% publication-quality plots from time-series datasets
+
+
+function DasPlotter(datamap, dataset)
     % DasPlotter - Creates plots from dataset according to datamap specifications
     % Parameters:
     %   datamap - Structure containing plotting configuration and data mappings
     %   dataset - Cell array or matrix of the actual data
-    %   timestamp - Optional timestamp for adding value annotations
-    
-    % Handle optional timestamp parameter
-    if nargin < 3
-        timestamp = [];  % No annotation if timestamp not provided
-    end
-    
+
     % Initialize metadata structure with default values if not provided
+    disp("DasPlotter V0.1.3");
     if ~isfield(datamap, 'meta')
         datamap.meta = struct();
     end
 
-%     datamap.meta.legend = datamap.legend;
     meta = datamap.meta;
     
     % Set default plotting parameters
@@ -37,15 +39,29 @@ function DasPlotter(datamap, dataset, timestamp)
     if ~isfield(meta, 'ylim')
         meta.ylim = struct();
     end
+
+    if ~isfield(meta, 'datatip')
+        meta.datatip = []; % No annotation datatip not provided
+    end
     
     % Ensure dataset is a cell array for consistent handling
     if ~iscell(dataset)
         dataset = {dataset};
     end
     
-    % Count number of plots needed (excluding time and meta fields)
+    % Convert all datamap non-cell values to cell arrays for consistent handling
     keys = fieldnames(datamap);
-    num_plots = numel(keys) - 2;  % Subtract 2 to exclude 'time' and 'meta'
+    for i = 1:numel(keys)
+        key = keys{i};
+        if ~strcmp(key, 'time') && ~strcmp(key, 'meta') && ~strcmp(key, 'title')
+            if ~iscell(datamap.(key))
+                datamap.(key) = {datamap.(key)};
+            end
+        end
+    end
+    
+    % Count number of plots needed (excluding time and meta fields)
+    num_plots = numel(keys) - sum(strcmp(keys, 'time') | strcmp(keys, 'meta') | strcmp(keys, 'title'));
     
     % Determine plot layout
     if isfield(meta, 'layout')
@@ -59,9 +75,15 @@ function DasPlotter(datamap, dataset, timestamp)
     end
     
     % Create figure with appropriate dimensions
-    if strcmp(meta.mode, 'save')
+    if isfield(meta, 'size') && isfield(meta.size, 'width') && isfield(meta.size, 'height')
+        fig_width = meta.size.width * num_cols;
+        fig_height = meta.size.height * num_rows;
+    else
         fig_width = 5 * num_cols;
         fig_height = 2 * num_rows;
+    end
+    
+    if strcmp(meta.mode, 'save')
         fig = figure('Units', 'inches', 'Position', [0, 0, fig_width, fig_height]);
     else
         fig = figure('Position', [100, 100, 300*num_cols, 250*num_rows]);
@@ -82,75 +104,73 @@ function DasPlotter(datamap, dataset, timestamp)
         value = datamap.(key);
         legend_provided = false;
         
-        % Handle cell array values (multiple lines per plot)
-        if iscell(value)
+        % Get total number of legend entries needed (datasets × variables)
+        total_lines = numel(value) * numel(dataset);
+        legend_entries = cell(1, total_lines);
+        legend_idx = 1;
+        
+        % Improved legend handling for multiple datasets
+        for k = 1:numel(dataset)
             for j = 1:numel(value)
-                for k = 1:numel(dataset)
-                    % Set legend name if provided in meta.legend
-                    if isfield(meta.legend, key) && numel(meta.legend.(key)) >= j
-                        legend_name = meta.legend.(key){j};
-                        legend_provided = true;
-                    else
-                        legend_name = '';
-                    end
-                    
-                    % Plot the data
-                    current_data = dataset{k}(:, value{j});
-                    plot(time_array, current_data, 'LineWidth', meta.lineWidth, ...
-                        'DisplayName', legend_name);
-                    hold on;
-                    
-                    % Add value annotation if timestamp provided
-                    if ~isempty(timestamp)
-                        [~, idx] = min(abs(time_array - timestamp));
-                        val = current_data(idx);
-                        
-                        % Get color safely
-                        colorOrder = get(gca, 'ColorOrder');
-                        colorIndex = mod(j-1, size(colorOrder, 1)) + 1;
-                        currentColor = colorOrder(colorIndex, :);
-                        
-                        % Add marker and text without legend entry
-                        plot(timestamp, val, 'o', 'MarkerSize', 6, ...
-                            'MarkerFaceColor', currentColor, 'HandleVisibility', 'off');
-                        text(timestamp, val + 0.1, sprintf('%.2f', val), ...
-                            'VerticalAlignment', 'bottom', ...
-                            'HorizontalAlignment', 'left', ...
-                            'FontSize', 8);
-                    end
-                end
-            end
-        else
-            % Handle single value (one line per plot)
-            for k = 1:numel(dataset)
-                % Set legend name if provided in meta.legend
+                % Determine legend name based on available information
                 if isfield(meta.legend, key)
-                    legend_name = meta.legend.(key){1};
+                    % Check if we have dataset-specific legend setup
+                    if isfield(meta.legend, 'useDatasetPrefix') && meta.legend.useDatasetPrefix
+                        % Format: "Dataset1 Va, Dataset2 Va, ..."
+                        if isfield(meta.legend, 'datasetNames') && numel(meta.legend.datasetNames) >= k
+                            dataset_prefix = meta.legend.datasetNames{k};
+                        else
+                            dataset_prefix = sprintf('Dataset %d', k);
+                        end
+                        
+                        if numel(meta.legend.(key)) >= j
+                            var_name = meta.legend.(key){j};
+                            legend_name = sprintf('%s %s', dataset_prefix, var_name);
+                        else
+                            legend_name = sprintf('%s Var %d', dataset_prefix, j);
+                        end
+                    else
+                        % Handle multiple datasets with explicit legend entries
+                        entry_idx = (k-1)*numel(value) + j;
+                        if numel(meta.legend.(key)) >= entry_idx
+                            legend_name = meta.legend.(key){entry_idx};
+                        elseif numel(meta.legend.(key)) >= j
+                            % Fall back to variable names if dataset names aren't provided
+                            legend_name = meta.legend.(key){j};
+                        else
+                            legend_name = sprintf('Var %d (Set %d)', j, k);
+                        end
+                    end
                     legend_provided = true;
                 else
-                    legend_name = '';
+                    % No legend provided, create a default
+                    legend_name = sprintf('Var %d (Set %d)', j, k);
                 end
                 
+                % Store the legend entry for later use
+                legend_entries{legend_idx} = legend_name;
+                legend_idx = legend_idx + 1;
+                
                 % Plot the data
-                current_data = dataset{k}(:, value);
+                current_data = dataset{k}(:, value{j});
                 plot(time_array, current_data, 'LineWidth', meta.lineWidth, ...
                     'DisplayName', legend_name);
                 hold on;
                 
-                % Add value annotation if timestamp provided
-                if ~isempty(timestamp)
-                    [~, idx] = min(abs(time_array - timestamp));
+                % Add value annotation if meta.datatip provided
+                if ~isempty(meta.datatip)
+                    [~, idx] = min(abs(time_array - meta.datatip));
                     val = current_data(idx);
                     
                     % Get color safely
                     colorOrder = get(gca, 'ColorOrder');
-                    colorIndex = mod(k-1, size(colorOrder, 1)) + 1;
+                    colorIndex = mod(legend_idx-2, size(colorOrder, 1)) + 1;
                     currentColor = colorOrder(colorIndex, :);
                     
                     % Add marker and text without legend entry
-                    plot(timestamp, val, 'o', 'MarkerSize', 6, ...
+                    plot(meta.datatip, val, 'o', 'MarkerSize', 6, ...
                         'MarkerFaceColor', currentColor, 'HandleVisibility', 'off');
-                    text(timestamp, val + 0.05, sprintf('%.2f', val), ...
+                    text(meta.datatip, val + 0.1, sprintf('%.2f', val), ...
                         'VerticalAlignment', 'bottom', ...
                         'HorizontalAlignment', 'left', ...
                         'FontSize', 8);
@@ -179,8 +199,13 @@ function DasPlotter(datamap, dataset, timestamp)
         
         % Show legend only if provided in meta.legend
         if legend_provided
+            % Get legend orientation, default to horizontal if not specified
+            if ~isfield(meta.legend, 'orientation')
+                meta.legend.orientation = 'horizontal';
+            end
+
             legend('show', 'Location', 'northeast', 'FontSize', 8, ...
-                'Orientation', 'horizontal');
+                'Orientation', meta.legend.orientation);
         else
             legend('hide');
         end
@@ -191,7 +216,15 @@ function DasPlotter(datamap, dataset, timestamp)
     
     % Adjust final figure layout
     if strcmp(meta.mode, 'save')
-        set(gcf, 'PaperUnits', 'inches', 'PaperPosition', [0, 0, fig_width, fig_height]);
+        % Update figure properties for better export
+        set(fig, 'PaperPositionMode', 'auto');
+        set(fig, 'InvertHardcopy', 'off');
+        
+        % Tight layout to minimize whitespace
+        set(fig, 'Units', 'inches');
+        fig_pos = get(fig, 'Position');
+        set(fig, 'PaperUnits', 'inches');
+        set(fig, 'PaperSize', [fig_pos(3) fig_pos(4)]);
     else
         set(gcf, 'Units', 'Normalized', 'OuterPosition', [0, 0.04, 1, 0.96]);
     end
@@ -200,20 +233,20 @@ function DasPlotter(datamap, dataset, timestamp)
     if strcmp(meta.mode, 'show')
         % Just display the figure
     elseif strcmp(meta.mode, 'save')
-        % Generate filename with timestamp
-        timestamp_str = datestr(now, 'yyyy_mm_dd_HH_MM_SS');
+        % Generate filename with meta.datatip
+        meta.datatip_str = datestr(now, 'yyyy_mm_dd_HH_MM_SS');
         if ~isfield(datamap, 'title')
-            base_filename = sprintf('plot_%s', timestamp_str);
+            base_filename = sprintf('plot_%s', meta.datatip_str);
         else
-            base_filename = sprintf('%s_%s', strrep(datamap.title, ' ', '_'), timestamp_str);
+            base_filename = sprintf('%s_%s', strrep(datamap.title, ' ', '_'), meta.datatip_str);
         end
         
         % Save files
         png_filepath = fullfile('./', [base_filename '.png']);
-%         mat_filepath = fullfile('./', [base_filename '.mat']);
-        print(fig, png_filepath, '-dpng', '-r300');
+        
+        % Use exportgraphics instead of print for better output with less whitespace
+        exportgraphics(fig, png_filepath, 'Resolution', 300, 'BackgroundColor', 'white', 'ContentType', 'image');
         fprintf('Saved plot as: %s\n', png_filepath);
-%         fprintf('Saved dataset as: %s\n', mat_filepath);
     else
         error('Invalid mode. Use ''show'' or ''save''.');
     end

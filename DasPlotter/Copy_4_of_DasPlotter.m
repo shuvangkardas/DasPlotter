@@ -13,7 +13,7 @@ function DasPlotter(datamap, dataset)
     %   dataset - Cell array or matrix of the actual data
 
     % Initialize metadata structure with default values if not provided
-    disp("DasPlotter V0.1.2");
+    disp("DasPlotter V0.1.5");
     if ~isfield(datamap, 'meta')
         datamap.meta = struct();
     end
@@ -44,6 +44,34 @@ function DasPlotter(datamap, dataset)
         meta.datatip = []; % No annotation datatip not provided
     end
     
+    % Handle x-axis configuration with backwards compatibility
+    if isfield(datamap, 'xaxis')
+        % User has specified a custom x-axis variable
+        x_field_name = 'xaxis';
+        
+        % Get x-axis label if provided, otherwise use the field name
+        if isfield(meta, 'xlabel') && isfield(meta.xlabel, 'name')
+            x_label = meta.xlabel.name;
+        else
+            % Try to get a default x-axis label
+            if isfield(meta.xlabel, 'default')
+                x_label = meta.xlabel.default;
+            else
+                x_label = 'Episode'; % Default label if none provided
+            end
+        end
+    else
+        % Use traditional 'time' as the x-axis variable for backwards compatibility
+        x_field_name = 'time';
+        
+        % Get custom x-axis label if provided, or use default 'Time'
+        if isfield(meta, 'xlabel') && isfield(meta.xlabel, 'name')
+            x_label = meta.xlabel.name;
+        else
+            x_label = 'Time'; % Default time label
+        end
+    end
+    
     % Ensure dataset is a cell array for consistent handling
     if ~iscell(dataset)
         dataset = {dataset};
@@ -53,15 +81,19 @@ function DasPlotter(datamap, dataset)
     keys = fieldnames(datamap);
     for i = 1:numel(keys)
         key = keys{i};
-        if ~strcmp(key, 'time') && ~strcmp(key, 'meta') && ~strcmp(key, 'title')
+        if ~strcmp(key, x_field_name) && ~strcmp(key, 'meta') && ~strcmp(key, 'title')
             if ~iscell(datamap.(key))
                 datamap.(key) = {datamap.(key)};
             end
         end
     end
     
-    % Count number of plots needed (excluding time and meta fields)
-    num_plots = numel(keys) - sum(strcmp(keys, 'time') | strcmp(keys, 'meta') | strcmp(keys, 'title'));
+    % Count number of plots needed (excluding x-axis field, meta, and title fields)
+    exclude_fields = false(size(keys));
+    for i = 1:numel(keys)
+        exclude_fields(i) = strcmp(keys{i}, x_field_name) || strcmp(keys{i}, 'meta') || strcmp(keys{i}, 'title');
+    end
+    num_plots = sum(~exclude_fields);
     
     % Determine plot layout
     if isfield(meta, 'layout')
@@ -89,14 +121,14 @@ function DasPlotter(datamap, dataset)
         fig = figure('Position', [100, 100, 300*num_cols, 250*num_rows]);
     end
     
-    % Extract time array from dataset
-    time_array = dataset{1}(:, datamap.time);
+    % Extract x-axis values from dataset
+    x_values = dataset{1}(:, datamap.(x_field_name));
     
     % Create individual plots
     plot_index = 1;
     for i = 1:numel(keys)
         key = keys{i};
-        if strcmp(key, 'time') || strcmp(key, 'meta') || strcmp(key, 'title')
+        if strcmp(key, x_field_name) || strcmp(key, 'meta') || strcmp(key, 'title')
             continue;
         end
         
@@ -104,31 +136,67 @@ function DasPlotter(datamap, dataset)
         value = datamap.(key);
         legend_provided = false;
         
-        % Unified handling for all plot data (all values are now cell arrays)
-        for j = 1:numel(value)
-            for k = 1:numel(dataset)
-                % Set legend name if provided in meta.legend
-                if isfield(meta.legend, key) && numel(meta.legend.(key)) >= j
-                    legend_name = meta.legend.(key){j};
+        % Get total number of legend entries needed (datasets × variables)
+        total_lines = numel(value) * numel(dataset);
+        legend_entries = cell(1, total_lines);
+        legend_idx = 1;
+        
+        % Improved legend handling for multiple datasets
+        for k = 1:numel(dataset)
+            for j = 1:numel(value)
+                % Determine legend name based on available information
+                if isfield(meta.legend, key)
+                    % Check if we have dataset-specific legend setup
+                    if isfield(meta.legend, 'useDatasetPrefix') && meta.legend.useDatasetPrefix
+                        % Format: "Dataset1 Va, Dataset2 Va, ..."
+                        if isfield(meta.legend, 'datasetNames') && numel(meta.legend.datasetNames) >= k
+                            dataset_prefix = meta.legend.datasetNames{k};
+                        else
+                            dataset_prefix = sprintf('Dataset %d', k);
+                        end
+                        
+                        if numel(meta.legend.(key)) >= j
+                            var_name = meta.legend.(key){j};
+                            legend_name = sprintf('%s %s', dataset_prefix, var_name);
+                        else
+                            legend_name = sprintf('%s Var %d', dataset_prefix, j);
+                        end
+                    else
+                        % Handle multiple datasets with explicit legend entries
+                        entry_idx = (k-1)*numel(value) + j;
+                        if numel(meta.legend.(key)) >= entry_idx
+                            legend_name = meta.legend.(key){entry_idx};
+                        elseif numel(meta.legend.(key)) >= j
+                            % Fall back to variable names if dataset names aren't provided
+                            legend_name = meta.legend.(key){j};
+                        else
+                            legend_name = sprintf('Var %d (Set %d)', j, k);
+                        end
+                    end
                     legend_provided = true;
                 else
-                    legend_name = '';
+                    % No legend provided, create a default
+                    legend_name = sprintf('Var %d (Set %d)', j, k);
                 end
+                
+                % Store the legend entry for later use
+                legend_entries{legend_idx} = legend_name;
+                legend_idx = legend_idx + 1;
                 
                 % Plot the data
                 current_data = dataset{k}(:, value{j});
-                plot(time_array, current_data, 'LineWidth', meta.lineWidth, ...
+                plot(x_values, current_data, 'LineWidth', meta.lineWidth, ...
                     'DisplayName', legend_name);
                 hold on;
                 
                 % Add value annotation if meta.datatip provided
                 if ~isempty(meta.datatip)
-                    [~, idx] = min(abs(time_array - meta.datatip));
+                    [~, idx] = min(abs(x_values - meta.datatip));
                     val = current_data(idx);
                     
                     % Get color safely
                     colorOrder = get(gca, 'ColorOrder');
-                    colorIndex = mod(j-1, size(colorOrder, 1)) + 1;
+                    colorIndex = mod(legend_idx-2, size(colorOrder, 1)) + 1;
                     currentColor = colorOrder(colorIndex, :);
                     
                     % Add marker and text without legend entry
@@ -153,7 +221,8 @@ function DasPlotter(datamap, dataset)
             title(key, 'FontSize', 8);
         end
         
-        xlabel('Time', 'FontSize', 8);
+        % Set x-axis label with the configurable label
+        xlabel(x_label, 'FontSize', 8);
         
         if isfield(meta, 'ylabel') && isfield(meta.ylabel, key)
             ylabel(meta.ylabel.(key), 'FontSize', 8);
@@ -167,8 +236,22 @@ function DasPlotter(datamap, dataset)
             if ~isfield(meta.legend, 'orientation')
                 meta.legend.orientation = 'horizontal';
             end
+            
+            % Get legend location, default to northeast if not specified
+            if ~isfield(meta.legend, 'location')
+                legend_location = 'northeast';
+            else
+                legend_location = meta.legend.location;
+            end
+            
+            % Get legend font size, default to 8 if not specified
+            if ~isfield(meta.legend, 'fontSize')
+                legend_font_size = 8;
+            else
+                legend_font_size = meta.legend.fontSize;
+            end
 
-            legend('show', 'Location', 'northeast', 'FontSize', 8, ...
+            legend('show', 'Location', legend_location, 'FontSize', legend_font_size, ...
                 'Orientation', meta.legend.orientation);
         else
             legend('hide');

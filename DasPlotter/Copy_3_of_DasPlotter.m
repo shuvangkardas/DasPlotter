@@ -13,7 +13,7 @@ function DasPlotter(datamap, dataset)
     %   dataset - Cell array or matrix of the actual data
 
     % Initialize metadata structure with default values if not provided
-    disp("DasPlotter V0.1.2");
+    disp("DasPlotter V0.1.4");
     if ~isfield(datamap, 'meta')
         datamap.meta = struct();
     end
@@ -104,16 +104,52 @@ function DasPlotter(datamap, dataset)
         value = datamap.(key);
         legend_provided = false;
         
-        % Unified handling for all plot data (all values are now cell arrays)
-        for j = 1:numel(value)
-            for k = 1:numel(dataset)
-                % Set legend name if provided in meta.legend
-                if isfield(meta.legend, key) && numel(meta.legend.(key)) >= j
-                    legend_name = meta.legend.(key){j};
+        % Get total number of legend entries needed (datasets × variables)
+        total_lines = numel(value) * numel(dataset);
+        legend_entries = cell(1, total_lines);
+        legend_idx = 1;
+        
+        % Improved legend handling for multiple datasets
+        for k = 1:numel(dataset)
+            for j = 1:numel(value)
+                % Determine legend name based on available information
+                if isfield(meta.legend, key)
+                    % Check if we have dataset-specific legend setup
+                    if isfield(meta.legend, 'useDatasetPrefix') && meta.legend.useDatasetPrefix
+                        % Format: "Dataset1 Va, Dataset2 Va, ..."
+                        if isfield(meta.legend, 'datasetNames') && numel(meta.legend.datasetNames) >= k
+                            dataset_prefix = meta.legend.datasetNames{k};
+                        else
+                            dataset_prefix = sprintf('Dataset %d', k);
+                        end
+                        
+                        if numel(meta.legend.(key)) >= j
+                            var_name = meta.legend.(key){j};
+                            legend_name = sprintf('%s %s', dataset_prefix, var_name);
+                        else
+                            legend_name = sprintf('%s Var %d', dataset_prefix, j);
+                        end
+                    else
+                        % Handle multiple datasets with explicit legend entries
+                        entry_idx = (k-1)*numel(value) + j;
+                        if numel(meta.legend.(key)) >= entry_idx
+                            legend_name = meta.legend.(key){entry_idx};
+                        elseif numel(meta.legend.(key)) >= j
+                            % Fall back to variable names if dataset names aren't provided
+                            legend_name = meta.legend.(key){j};
+                        else
+                            legend_name = sprintf('Var %d (Set %d)', j, k);
+                        end
+                    end
                     legend_provided = true;
                 else
-                    legend_name = '';
+                    % No legend provided, create a default
+                    legend_name = sprintf('Var %d (Set %d)', j, k);
                 end
+                
+                % Store the legend entry for later use
+                legend_entries{legend_idx} = legend_name;
+                legend_idx = legend_idx + 1;
                 
                 % Plot the data
                 current_data = dataset{k}(:, value{j});
@@ -128,7 +164,7 @@ function DasPlotter(datamap, dataset)
                     
                     % Get color safely
                     colorOrder = get(gca, 'ColorOrder');
-                    colorIndex = mod(j-1, size(colorOrder, 1)) + 1;
+                    colorIndex = mod(legend_idx-2, size(colorOrder, 1)) + 1;
                     currentColor = colorOrder(colorIndex, :);
                     
                     % Add marker and text without legend entry
@@ -167,8 +203,22 @@ function DasPlotter(datamap, dataset)
             if ~isfield(meta.legend, 'orientation')
                 meta.legend.orientation = 'horizontal';
             end
+            
+            % Get legend location, default to northeast if not specified
+            if ~isfield(meta.legend, 'location')
+                legend_location = 'northeast';
+            else
+                legend_location = meta.legend.location;
+            end
+            
+            % Get legend font size, default to 8 if not specified
+            if ~isfield(meta.legend, 'fontSize')
+                legend_font_size = 8;
+            else
+                legend_font_size = meta.legend.fontSize;
+            end
 
-            legend('show', 'Location', 'northeast', 'FontSize', 8, ...
+            legend('show', 'Location', legend_location, 'FontSize', legend_font_size, ...
                 'Orientation', meta.legend.orientation);
         else
             legend('hide');
